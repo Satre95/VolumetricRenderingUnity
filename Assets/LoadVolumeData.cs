@@ -13,6 +13,10 @@ public class LoadVolumeData : MonoBehaviour {
 		string dataPath = Application.dataPath;
 		List<byte> imageData3D = loadAllImagesInFolder (dataPath + "/head-png");
 
+		Color[] colors = convertByteDataToColors (imageData3D);
+
+		volumeData.SetPixels (colors);
+		volumeData.Apply ();
 	}
 	
 	// Update is called once per frame
@@ -46,7 +50,14 @@ public class LoadVolumeData : MonoBehaviour {
 	Color[] convertByteDataToColors( List<byte> byteData) {
 		Color[] colors = new Color[256 * 256 * numImages];
 		for (int i = 0; i < byteData.Count; i += 3) {
-			colors [i] = new Color (byteData [i], byteData[i+1], byteData[i+2], byteData[i+3]);
+			byte red = byteData [i];
+			byte green = byteData [i + 1];
+			byte blue = byteData [i + 2];
+			colors [i] = new Color (byteData[i], byteData[i+1], byteData[i+2], 1);
+
+			if (colors [i].r < 0.32 && colors [i].g < 0.32 && colors [i].b < 0.32) {
+				colors [i].a = 0;
+			}
 		}
 
 		return colors;
