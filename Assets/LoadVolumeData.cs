@@ -17,6 +17,8 @@ public class LoadVolumeData : MonoBehaviour {
 
 		volumeData.SetPixels (colors);
 		volumeData.Apply ();
+
+        GetComponent<Renderer>().material.SetTexture("_Texture", volumeData);
 	}
 	
 	// Update is called once per frame
