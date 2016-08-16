@@ -32,7 +32,7 @@ public class LoadVolumeData : MonoBehaviour {
 
 		volumeData.SetPixels (allColorsWithPadding);
 		volumeData.Apply ();
-		GetComponent<Renderer>().material.SetTexture("_Texture", volumeData);
+		GetComponent<Renderer>().material.SetTexture("_VolTex", volumeData);
 	}
 
 	void addImageColorToList(Texture2D anImage){
