@@ -2,7 +2,12 @@
 {
 	Properties
 	{
-		_VolTex ("_Texture", 3D) = "" {}
+		_VolTex ("_VolTex", 3D) = "" {}
+		_VolDimensions( "The width, height, and depth of the cube", Vector) = (0,0,0)
+		_VolDimensionsPOT( "Width, height, and depth of cube where size is power of two", Vector) = (0,0,0)
+		_ZTexOffset( "Don't know what this is for", Float) = 0
+		_Quality( "Don't know what this is for", Float) = 0
+		_Density( "Density of voxels", Float) = 0.75
 	}
 	SubShader
 	{
@@ -33,7 +38,14 @@
 			};
 
 			sampler3D _VolTex;
-			float4 _VolTex_ST;
+			float4 _VolTex_ST; 
+
+			//Custom uniforms for volumetric rendering.
+			float3 _VolDimensions;
+			float3 _VolDimensionsPOT;
+			float _ZTexOffset;
+			float _Quality;
+			float _Density;
 
 			//----------------------------------------
 			//VERTEX SHADER

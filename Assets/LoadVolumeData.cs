@@ -32,7 +32,8 @@ public class LoadVolumeData : MonoBehaviour {
 
 		volumeData.SetPixels (allColorsWithPadding);
 		volumeData.Apply ();
-		GetComponent<Renderer>().material.SetTexture("_VolTex", volumeData);
+
+		attachUniforms ();
 	}
 
 	void addImageColorToList(Texture2D anImage){
@@ -44,5 +45,26 @@ public class LoadVolumeData : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 	
+	}
+
+	void attachUniforms() {
+		Material material = GetComponent<Renderer> ().material;
+
+		//Attach the texture as uniform.
+		material.SetTexture("_VolTex", volumeData);
+
+		//Set the cube dimensions.
+		Vector3 cubeDimensions = new Vector3 (256, 256, 128);
+		material.SetVector("_VolDimensions", cubeDimensions);
+		material.SetVector ("_VolDimensionsPOT", cubeDimensions);
+
+		//set the z Tex offset
+		material.SetFloat("_ZTexOffset", 0);
+
+		//set the quality
+		material.SetFloat("Quality", 1.0f);
+
+		//set the density of the voxel
+		material.SetFloat("_Density", 0.75f);
 	}
 }
