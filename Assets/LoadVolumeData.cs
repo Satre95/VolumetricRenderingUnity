@@ -1,11 +1,14 @@
-﻿using UnityEngine;
+﻿#if UNITY_EDITOR
+using UnityEditor;
+#endif
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
 public class LoadVolumeData : MonoBehaviour {
 
-	public Texture3D volumeData;
+	//public Texture3D volumeData;
 	public List<Color> imageColors;
 
 	private const int numImages = 120;
@@ -28,43 +31,24 @@ public class LoadVolumeData : MonoBehaviour {
 			allColorsWithPadding [i] = new Color (0, 0, 0, 0);
 		}
 
-		volumeData = new Texture3D (256, 256, 128, TextureFormat.ARGB32, false);
+		Texture3D volumeData = new Texture3D (256, 256, 128, TextureFormat.ARGB32, false);
 
 		volumeData.SetPixels (allColorsWithPadding);
 		volumeData.Apply ();
 
-		attachUniforms ();
-	}
+        // assign it to the material of the parent object
+        GetComponent<Renderer>().material.SetTexture("_Data", volumeData);
+        // save it as an asset for re-use
+        #if UNITY_EDITOR
+        AssetDatabase.CreateAsset(volumeData, @"Assets/" + "skull" + ".asset");
+        #endif
+    }
 
-	void addImageColorToList(Texture2D anImage){
+    void addImageColorToList(Texture2D anImage){
 		Color[] tempColors = anImage.GetPixels ();
 		for (int i = 0; i < tempColors.Length; i++) {
 			imageColors.Add (tempColors [i]);
 		}
 	}
-	// Update is called once per frame
-	void Update () {
-	
-	}
 
-	void attachUniforms() {
-		Material material = GetComponent<Renderer> ().material;
-
-		//Attach the texture as uniform.
-		material.SetTexture("_VolTex", volumeData);
-
-		//Set the cube dimensions.
-		Vector3 cubeDimensions = new Vector3 (256, 256, 128);
-		material.SetVector("_VolDimensions", cubeDimensions);
-		material.SetVector ("_VolDimensionsPOT", cubeDimensions);
-
-		//set the z Tex offset
-		material.SetFloat("_ZTexOffset", 0);
-
-		//set the quality
-		material.SetFloat("Quality", 1.0f);
-
-		//set the density of the voxel
-		material.SetFloat("_Density", 0.75f);
-	}
 }

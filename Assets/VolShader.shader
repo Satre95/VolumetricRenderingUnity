@@ -1,173 +1,174 @@
-﻿Shader "Unlit/VolShader"
-{
-	Properties
-	{
-		_VolTex ("_VolTex", 3D) = "" {}
-		_VolDimensions( "The width, height, and depth of the cube", Vector) = (0,0,0)
-		_VolDimensionsPOT( "Width, height, and depth of cube where size is power of two", Vector) = (0,0,0)
-		_ZTexOffset( "ZTexOffset", Float) = 0
-		_Quality( "Quality", Float) = 1.0
-		_Density( "Voxel Density", Float) = 0.75
+﻿// shader that performs ray casting using a 3D texture
+// adapted from a Cg example by Nvidia
+// http://developer.download.nvidia.com/SDK/10/opengl/samples.html
+// Gilles Ferrand, University of Manitoba 2016
+
+Shader "Custom/Ray Casting" {
+
+	Properties{
+		// the data cube
+		[NoScaleOffset] _Data("Data Texture", 3D) = "" {}
+	// data slicing and thresholding
+	_SliceAxis1Min("Slice along axis 1: min", Range(0,1)) = 0
+		_SliceAxis1Max("Slice along axis 1: max", Range(0,1)) = 1
+		_SliceAxis2Min("Slice along axis 2: min", Range(0,1)) = 0
+		_SliceAxis2Max("Slice along axis 2: max", Range(0,1)) = 1
+		_SliceAxis3Min("Slice along axis 3: min", Range(0,1)) = 0
+		_SliceAxis3Max("Slice along axis 3: max", Range(0,1)) = 1
+		_DataMin("Data threshold: min", Range(0,1)) = 0
+		_DataMax("Data threshold: max", Range(0,1)) = 1
+		// normalization of data intensity (has to be adjusted for each data set, also depends on the number of steps)
+		_Normalization("Intensity normalization", Float) = 1
 	}
-	SubShader
+
+		SubShader{
+
+		Pass{
+		Cull Off
+		ZTest Always
+		ZWrite Off
+		Fog{ Mode off }
+
+		CGPROGRAM
+#pragma target 3.0
+#pragma vertex vert
+#pragma fragment frag
+
+#include "UnityCG.cginc"
+
+		sampler3D _Data;
+	float _SliceAxis1Min, _SliceAxis1Max;
+	float _SliceAxis2Min, _SliceAxis2Max;
+	float _SliceAxis3Min, _SliceAxis3Max;
+	float _DataMin, _DataMax;
+	float _Normalization;
+
+	// calculates intersection between a ray and a box
+	// http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
+	bool IntersectBox(float3 ray_o, float3 ray_d, float3 boxMin, float3 boxMax, out float tNear, out float tFar)
 	{
-		Tags { "RenderType"="Opaque" }
-		LOD 100
-
-		Pass
-		{
-			CGPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
-			// make fog work
-			#pragma multi_compile_fog
-			
-			#include "UnityCG.cginc"
-
-			struct appdata
-			{
-				float4 vertex : POSITION;
-				float2 uv : TEXCOORD0;
-			};
-
-			struct v2f
-			{
-				float3 uvw : TEXCOORD0;
-				UNITY_FOG_COORDS(1)
-				float4 vertex : SV_POSITION;
-			};
-
-			struct Ray {
-				float3 Origin;
-				float3 Direction;
-			};
-
-			struct BoundingBox {
-				float3 Min;
-				float3 Max;
-			};
-
-			sampler3D _VolTex;
-			float4 _VolTex_ST; 
-
-			//Custom uniforms for volumetric rendering.
-			float3 _VolDimensions;
-			float3 _VolDimensionsPOT;
-			float _ZTexOffset;
-			float _Quality;
-			float _Density;
-
-			//-----------------------------------------------------------------------
-			//VERTEX SHADER
-			v2f vert (appdata v)
-			{
-				v2f o;
-				o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
-				o.uvw = v.vertex.xyz * 0.5f + 0.5f;
-				UNITY_TRANSFER_FOG(o,o.vertex);
-				return o;
-			}
-
-			bool IntersectBox(Ray ray, BoundingBox box, out float t0, out float t1) {
-				float3 inverseRay = 1.0f / ray.Direction;
-				float3 tBottom = inverseRay * (box.Min - ray.Origin); //vector from origin to box min divided by direction
-				float3 tTop = inverseRay * (box.Max - ray.Origin); //vector from origin to box max divided by direction
-
-				float3 tMin = min(tTop, tBottom);
-				float3 tMax = min(tTop, tBottom);
-
-				float2 t = max(tMin.xx, tMin.yz);
-
-				t0 = max(t.x, t.y);
-				t = min(tMax.xx, tMax.yz);
-				t1 = min(t.x, t.y);
-
-				return t0 <= t1;
-			}
-
-
-
-
-			//-----------------------------------------------------------------------
-			//FRAGMENT SHADER
-			fixed4 frag (v2f i) : SV_Target
-			{
-
-				//TODO: Add raymarching vol sampling here.
-				float3 minVolume = 1.0f/_VolDimensionsPOT;
-				float3 maxVolume = 1.0f - minVolume;
-				float3 volDimension = (maxVolume - minVolume) * _VolDimensions;
-				float volLength = length(volDimension);
-
-				float4 finalColor = float4(0,0,0,0);
-				float3 zOffsetVector = float3(0,0,0);
-				float3 backPos = i.vertex.xyz * 0.5f + 0.5f;
-				float3 lookVec = normalize(backPos - _WorldSpaceCameraPos);
-
-				Ray eye;
-				eye.Origin = _WorldSpaceCameraPos;
-				eye.Direction = lookVec;
-
-
-				BoundingBox box;
-				box.Min = float3(0,0,0);
-				box.Max = float3(1,1,1);
-
-				float tnear, tfar;
-				IntersectBox(eye, box, tnear, tfar);
-				if(tnear < 0.15f){
-					tnear = 0.15f;
-				}
-				if(tnear > tfar){
-					discard;
-				}
-
-				float3 rayStart = (eye.Origin + eye.Direction * tnear) * (maxVolume - minVolume) + minVolume;
-				float3 rayStop = (eye.Origin + eye.Direction * tfar) * (maxVolume - minVolume) + minVolume;
-
-				float3 dir = rayStop - rayStart;
-				float3 vec = rayStart;
-
-				float dirLength = length(dir);
-				if(dirLength == clamp(dirLength, 0, volLength)){
-					int steps = int(floor(length(volDimension * dir) * _Quality));
-					float3 deltaDir = dir/float(steps);
-					float4 colorSample;
-					float alphaScale = _Density/_Quality;
-
-					float random = frac(sin( i.uvw.x * 12.9898 + i.uvw.y * 78.233) * 43758.5453);
-					vec += deltaDir * random;
-
-					//RayCast!!
-					[unroll(2000)] for( int i = 0; i < steps; i++) {
-						float3 vecZ = vec + zOffsetVector;
-
-						if(vecZ.z > maxVolume.z) {
-							vecZ.z -= maxVolume.z;
-						}
-
-						colorSample = tex3D(_VolTex, vecZ);
-
-						float oneMinusAlpha = 1.0f - finalColor.a;
-						colorSample.a *= alphaScale;
-
-						finalColor.rgb = lerp(finalColor.rgb, colorSample.rgb * colorSample.a, oneMinusAlpha);
-						finalColor.a += finalColor.a * oneMinusAlpha;
-						finalColor.rgb /= finalColor.a;
-
-						if( finalColor.a >= 1.0f) {
-							break;
-						}
-
-						vec += deltaDir;
-					}
-				}
-
-				// apply fog
-				UNITY_APPLY_FOG(i.fogCoord, finalColor);
-				return finalColor;
-			}
-			ENDCG
-		}
+		// compute intersection of ray with all six bbox planes
+		float3 invR = 1.0 / ray_d;
+		float3 tBot = invR * (boxMin.xyz - ray_o);
+		float3 tTop = invR * (boxMax.xyz - ray_o);
+		// re-order intersections to find smallest and largest on each axis
+		float3 tMin = min(tTop, tBot);
+		float3 tMax = max(tTop, tBot);
+		// find the largest tMin and the smallest tMax
+		float2 t0 = max(tMin.xx, tMin.yz);
+		float largest_tMin = max(t0.x, t0.y);
+		t0 = min(tMax.xx, tMax.yz);
+		float smallest_tMax = min(t0.x, t0.y);
+		// check for hit
+		bool hit = (largest_tMin <= smallest_tMax);
+		tNear = largest_tMin;
+		tFar = smallest_tMax;
+		return hit;
 	}
+
+	struct vert_input {
+		float4 pos : POSITION;
+	};
+
+	struct frag_input {
+		float4 pos : SV_POSITION;
+		float3 ray_o : TEXCOORD1; // ray origin
+		float3 ray_d : TEXCOORD2; // ray direction
+	};
+
+	// vertex program
+	frag_input vert(vert_input i)
+	{
+		frag_input o;
+
+		// calculate eye ray in object space
+		o.ray_d = -ObjSpaceViewDir(i.pos);
+		o.ray_o = i.pos.xyz - o.ray_d;
+		// calculate position on screen (unused)
+		o.pos = mul(UNITY_MATRIX_MVP, i.pos);
+
+		return o;
+	}
+
+	// gets data value at a given position
+	float4 get_data(float3 pos) {
+		// sample texture (pos is normalized in [0,1])
+		float3 pos_righthanded = float3(pos.x,pos.z,pos.y);
+		//float data = tex3D(_Data, pos_righthanded).a;
+		float data = tex3Dlod(_Data, float4(pos_righthanded,0)).a;
+		// slice and threshold
+		data *= step(_SliceAxis1Min, pos.x);
+		data *= step(_SliceAxis2Min, pos.y);
+		data *= step(_SliceAxis3Min, pos.z);
+		data *= step(pos.x, _SliceAxis1Max);
+		data *= step(pos.y, _SliceAxis2Max);
+		data *= step(pos.z, _SliceAxis3Max);
+		data *= step(_DataMin, data);
+		data *= step(data, _DataMax);
+		// colourize
+		float4 col = float4(data, data, data, data);
+		return col;
+	}
+
+#define FRONT_TO_BACK // ray integration order (BACK_TO_FRONT not working when being inside the cube)
+#define STEP_CNT 128 // should ideally be at least as large as data resolution, but strongly affects frame rate
+
+	// fragment program
+	float4 frag(frag_input i) : COLOR
+	{
+		i.ray_d = normalize(i.ray_d);
+	// calculate eye ray intersection with cube bounding box
+	float3 boxMin = { -0.5, -0.5, -0.5 };
+	float3 boxMax = { 0.5,  0.5,  0.5 };
+	float tNear, tFar;
+	bool hit = IntersectBox(i.ray_o, i.ray_d, boxMin, boxMax, tNear, tFar);
+	if (!hit) discard;
+	if (tNear < 0.0) tNear = 0.0;
+	// calculate intersection points
+	float3 pNear = i.ray_o + i.ray_d*tNear;
+	float3 pFar = i.ray_o + i.ray_d*tFar;
+	// convert to texture space
+	pNear = pNear + 0.5;
+	pFar = pFar + 0.5;
+	//return float4(pNear, 1);
+	//return float4(pFar , 1);
+
+	// march along ray inside the cube, accumulating color
+#ifdef FRONT_TO_BACK
+	float3 ray_pos = pNear;
+	float3 ray_dir = pFar - pNear;
+#else
+	float3 ray_pos = pFar;
+	float3 ray_dir = pNear - pFar;
+#endif
+	float3 ray_step = normalize(ray_dir) * sqrt(3) / STEP_CNT;
+	//return float4(abs(ray_dir), 1);
+	//return float4(length(ray_dir), length(ray_dir), length(ray_dir), 1);
+	float4 ray_col = 0;
+	for (int k = 0; k < STEP_CNT; k++)
+	{
+		float4 voxel_col = get_data(ray_pos);
+#ifdef FRONT_TO_BACK
+		//voxel_col.rgb *= voxel_col.a;
+		//ray_col = (1.0f - ray_col.a) * voxel_col + ray_col;
+		ray_col.rgb = ray_col.rgb + (1 - ray_col.a) * voxel_col.a * voxel_col.rgb;
+		ray_col.a = ray_col.a + (1 - ray_col.a) * voxel_col.a;
+#else
+		//ray_col = lerp(ray_col, voxel_col, voxel_col.a);
+		ray_col = (1 - voxel_col.a)*ray_col + voxel_col.a*voxel_col;
+#endif
+		ray_pos += ray_step;
+		if (ray_pos.x < 0 || ray_pos.y < 0 || ray_pos.z < 0) break;
+		if (ray_pos.x > 1 || ray_pos.y > 1 || ray_pos.z > 1) break;
+	}
+	return ray_col*_Normalization;
+	}
+
+		ENDCG
+
+	}
+
+	}
+
+		FallBack Off
 }
