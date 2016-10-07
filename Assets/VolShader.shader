@@ -111,7 +111,7 @@ Shader "Custom/Ray Casting" {
 	}
 
 #define FRONT_TO_BACK // ray integration order (BACK_TO_FRONT not working when being inside the cube)
-#define STEP_CNT 128 // should ideally be at least as large as data resolution, but strongly affects frame rate
+#define STEP_CNT 512 // should ideally be at least as large as data resolution, but strongly affects frame rate
 
 	// fragment program
 	float4 frag(frag_input i) : COLOR

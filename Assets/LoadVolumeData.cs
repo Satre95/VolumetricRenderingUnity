@@ -15,7 +15,7 @@ public class LoadVolumeData : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		string head = "head-";
-		for (int i = 0; i < numImages; i++) {
+		for (int i = numImages-1; i > 0; i--) {
 			Texture2D anImage = Resources.Load("head-images/" + head + i.ToString().PadLeft(3, '0')) as Texture2D;
 			addImageColorToList (anImage);
 		}
