@@ -6,7 +6,7 @@
 Shader "Custom/Ray Casting" {
 
 	Properties{
-		// the data cube
+		// the data cube, just so it can load different image data
 		[NoScaleOffset] _Data("Data Texture", 3D) = "" {}
 	// data slicing and thresholding
 	_SliceAxis1Min("Slice along axis 1: min", Range(0,1)) = 0
@@ -96,16 +96,23 @@ Shader "Custom/Ray Casting" {
 		float3 pos_righthanded = float3(pos.x,pos.z,pos.y);
 		//float data = tex3D(_Data, pos_righthanded).a;
 		float data = tex3Dlod(_Data, float4(pos_righthanded,0)).a;
+
 		// slice and threshold
+		//Check if data is within bounds of box in all axes. 
+		//Use steps in lieu of if checks
 		data *= step(_SliceAxis1Min, pos.x);
 		data *= step(_SliceAxis2Min, pos.y);
 		data *= step(_SliceAxis3Min, pos.z);
 		data *= step(pos.x, _SliceAxis1Max);
 		data *= step(pos.y, _SliceAxis2Max);
 		data *= step(pos.z, _SliceAxis3Max);
-		data *= step(_DataMin, data);
+
+		//check if DataMin <= data <= DataMax
+		data *= step(_DataMin, data); 
 		data *= step(data, _DataMax);
 		// colourize
+		//TODO: When we move the color data set, this function will have to be changed to sample use all colors
+		//Currently, it interprets alpha as grayscale
 		float4 col = float4(data, data, data, data);
 		return col;
 	}
@@ -141,7 +148,9 @@ Shader "Custom/Ray Casting" {
 	float3 ray_pos = pFar;
 	float3 ray_dir = pNear - pFar;
 #endif
+	//TODO WHY SQRT OF 3?
 	float3 ray_step = normalize(ray_dir) * sqrt(3) / STEP_CNT;
+	//float3 ray_step=normalize(ray_dir)*frac(sin(i.pos.x * 12.9898 + i.pos.y * 78.233) * 43758.5453);
 	//return float4(abs(ray_dir), 1);
 	//return float4(length(ray_dir), length(ray_dir), length(ray_dir), 1);
 	float4 ray_col = 0;
@@ -151,17 +160,21 @@ Shader "Custom/Ray Casting" {
 #ifdef FRONT_TO_BACK
 		//voxel_col.rgb *= voxel_col.a;
 		//ray_col = (1.0f - ray_col.a) * voxel_col + ray_col;
+		//TODO: Lookup alpha blending functions. this is lerping
 		ray_col.rgb = ray_col.rgb + (1 - ray_col.a) * voxel_col.a * voxel_col.rgb;
+		//ray_col.rgb = lerp(ray_col.rgb, voxel_col.rgb*voxel_col.a, 1 - ray_col.a);
 		ray_col.a = ray_col.a + (1 - ray_col.a) * voxel_col.a;
+
 #else
 		//ray_col = lerp(ray_col, voxel_col, voxel_col.a);
 		ray_col = (1 - voxel_col.a)*ray_col + voxel_col.a*voxel_col;
 #endif
 		ray_pos += ray_step;
+		//keep it between 0 and 1 for color
 		if (ray_pos.x < 0 || ray_pos.y < 0 || ray_pos.z < 0) break;
 		if (ray_pos.x > 1 || ray_pos.y > 1 || ray_pos.z > 1) break;
 	}
-	return ray_col*_Normalization;
+	return ray_col*_Normalization; //gray to white
 	}
 
 		ENDCG
