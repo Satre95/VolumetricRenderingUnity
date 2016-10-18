@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Transform : MonoBehaviour {
+public class Controls : MonoBehaviour {
 
     // rotate
     public float rotSpeed = 4.0f;
