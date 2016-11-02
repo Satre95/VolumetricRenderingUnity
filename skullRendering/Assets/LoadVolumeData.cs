@@ -40,7 +40,7 @@ public class LoadVolumeData : MonoBehaviour {
         GetComponent<Renderer>().material.SetTexture("_Data", volumeData);
         // save it as an asset for re-use
         #if UNITY_EDITOR
-        AssetDatabase.CreateAsset(volumeData, @"Assets/" + "skull" + ".asset");
+        //AssetDatabase.CreateAsset(volumeData, @"Assets/" + "skull" + ".asset");
         #endif
     }
 
