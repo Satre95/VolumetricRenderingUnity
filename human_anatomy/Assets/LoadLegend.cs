@@ -11,14 +11,14 @@ public class LoadLegend : MonoBehaviour
 
     //public Texture3D volumeData;
     public List<Color> imageColors;
-    //cadaver/5
-    private const int numImages = 400;
-    private const int startNumber = 60;
+
+    public static int startNumber = 60;
+    public static int finalLegendIndex = 1010;
     // Use this for initialization
     void Start()
     {
 
-        for (int i = startNumber; i < numImages+startNumber; i+=5)
+        for (int i = startNumber; i <= finalLegendIndex; i+=5)
         {
             Texture2D anImage = Resources.Load("Legend/"+i.ToString().PadLeft(4, '0')) as Texture2D;
             addImageColorToList(anImage);

@@ -118,7 +118,10 @@ Shader "Custom/Legend" {
 
 	float4 get_data(float3 pos) {
 		float3 pos_righthanded = float3(pos.x, pos.z, pos.y);
-		if (isBlack(pos)){
+
+		return (isBlack(pos_righthanded)) ? tex3D(Cadaver_Data, pos_righthanded).rgba : float4(0,0,0,0);
+		/*
+		if (isBlack(pos_righthanded)){
 			//get voxel from cadaver
 			return tex3D(Cadaver_Data, pos_righthanded).rgba; 
 		}
@@ -126,12 +129,13 @@ Shader "Custom/Legend" {
 			//if it's not the region we want just return nothing
 			return float4(0, 0, 0, 0);
 		}
+		*/
 	}
 
 
 
 #define FRONT_TO_BACK // ray integration order (BACK_TO_FRONT not working when being inside the cube)
-#define STEP_CNT 512 // should ideally be at least as large as data resolution, but strongly affects frame rate
+#define STEP_CNT 191 // should ideally be at least as large as data resolution, but strongly affects frame rate
 
 	// fragment program
 	float4 frag(frag_input i) : COLOR
@@ -161,7 +165,7 @@ Shader "Custom/Legend" {
 #endif
 	float3 ray_step = normalize(ray_dir) * sqrt(3) / STEP_CNT;
 	float4 ray_col = 0;
-	for (int k = 0; k < STEP_CNT; k++)
+	[unroll(191)] for (int k = 0; k < STEP_CNT; k++)
 	{
 		
 		float4 voxel_col = get_data(ray_pos);

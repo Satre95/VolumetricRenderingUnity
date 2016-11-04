@@ -11,16 +11,13 @@ public class LoadCadaver : MonoBehaviour
 
     //public Texture3D volumeData;
     public List<Color> imageColors;
-
-    private const int numImages = 400;
     // Use this for initialization
     void Start()
     {
         //need to correspond with legend's z-axis
-        for (int i = 0; i < numImages; i+=5)
+        for (int i = LoadLegend.startNumber; i <= LoadLegend.finalLegendIndex; i+=5)
         {
             Texture2D anImage = Resources.Load("Cadaver/"+i.ToString().PadLeft(4, '0')) as Texture2D;
-            print(i.ToString().PadLeft(4, '0'));
             addImageColorToList(anImage);
         }
 
