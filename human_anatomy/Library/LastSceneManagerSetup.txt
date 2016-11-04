@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/human_anatomy.unity
+  isLoaded: 1
+  isActive: 1
